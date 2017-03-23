@@ -1,24 +1,3 @@
-#MIT License
-
-#Copyright (c) [2017] [GEMA PEREZ ORTIZ]
-
-#Permission is hereby granted, free of charge, to any person obtaining a copy
-#of this software and associated documentation files (the "Software"), to deal
-#in the Software without restriction, including without limitation the rights
-#to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-#copies of the Software, and to permit persons to whom the Software is
-#furnished to do so, subject to the following conditions:
-
-#The above copyright notice and this permission notice shall be included in all
-#copies or substantial portions of the Software.
-
-#THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-#SOFTWARE.
 
 #primera parte montar servidor
 import http.server
@@ -32,30 +11,15 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
     OPENFDA_API_URL = "api.fda.gov"
     OPENFDA_API_EVENT = "/drug/event.json"
+    LIMIT = '&limit=10'
+    RECEIVE_LIMIT="?limit=10"
 
-    def get_companies(self,drug):
+    def get_events(self,item,query):
         connection = http.client.HTTPSConnection(self.OPENFDA_API_URL)
-        connection.request("GET",self.OPENFDA_API_EVENT +'?search=patient.drug.medicinalproduct:'+drug+'&limit=10')
-        r1 = connection.getresponse()
-        data1 = r1.read() #te devuelve la informacion en bytes
-        data1 = data1.decode("utf8") #para pasar de bytes a string
-        event = data1
-
-        return event
-
-    def get_medical_product(self,companumero): #sacar el evento bien!!!!!!!!!!!!****
-        connection = http.client.HTTPSConnection(self.OPENFDA_API_URL)
-        connection.request("GET",self.OPENFDA_API_EVENT +'?search=companynumb:'+companumero+'&limit=10')
-        r1 = connection.getresponse()
-        data1 = r1.read() #te devuelve la informacion en bytes
-        data1 = data1.decode("utf8") #para pasar de bytes a string
-        event = data1
-
-        return event
-
-    def get_event(self):
-        connection = http.client.HTTPSConnection(self.OPENFDA_API_URL)
-        connection.request("GET",self.OPENFDA_API_EVENT + "?limit=10")
+        if item or query =='':
+            connection.request("GET",self.OPENFDA_API_EVENT + self.RECEIVE_LIMIT)
+        else:
+            connection.request("GET",self.OPENFDA_API_EVENT+ query + item + self.LIMIT)
         r1 = connection.getresponse()
         data1 = r1.read() #te devuelve la informacion en bytes
         data1 = data1.decode("utf8") #para pasar de bytes a string
@@ -71,7 +35,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             </head>
             <body>
             <h1>OPEN FDA client</>
-            <form method="get" action="receive">
+                <form method="get" action="receive">
                     <input type="submit" value="listDrugs">
                     </input>
                 </form>
@@ -103,30 +67,33 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         # Send headers
         self.send_header("Content-type","text/html") #va a devolver contenidos en http
         self.end_headers()
-
         return
 
+#----------------------send_ANS
 
     def send_ans(self,html):
         if self.path == '/':
-            return self.wfile.write(bytes(html, "utf8")) #fichero de escritura que llega al cliente
-        elif self.path=='/receive':
-            event=self.get_event()
+            return self.wfile.write(bytes(html, "utf8"))
+        elif self.path=='/receive?':
+            event=self.get_events('','')
             list_drugs=self.get_list(event)
             html=self.html_event(list_drugs)
-        elif self.path == '/search':
-            drug = "LYRICA"
-            event =self.get_companies(drug)
+        elif self.path == '/search?':
+            drug = 'LYRICA'
+            query = '?search=patient.drug.medicinalproduct:'
+            event =self.get_events(drug,query)
             list_companies=self.get_companies_list(event)
             html= self.html_event(list_companies)
         elif '/search?Drug' in self.path:
             drug = self.path.split("=")[1]
-            event = self.get_companies(drug)
+            query = '?search=patient.drug.medicinalproduct:'
+            event = self.get_events(drug,query)
             list_companies=self.get_companies_list(event)
             html=self.html_event(list_companies)
         elif '/search?companynumb' in self.path:
             number = self.path.split("=")[1]
-            event = self.get_medical_product(number)
+            query = '?search=companynumb:'
+            event = self.get_events(number,query)
             list_numbers=self.get_list(event)
             html = self.html_event(list_numbers)
         else:
@@ -134,7 +101,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
         return self.wfile.write(bytes(html, "utf8"))
 
-
+#-------------------
 
     # GET, metodo GET
     def do_GET(self): #en self controlamos la orden
@@ -145,18 +112,17 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_ans(html)
         return
 
+#----------parsing
     def get_list(self,event):
         drug=[]
-        #event = self.get_event()
         event1 = json.loads(event)
-        results = event1['results']
+        results = event1["results"]
         for i in results:
             drug+= [i["patient"]["drug"][0]["medicinalproduct"]]
         return drug
 
     def get_companies_list(self,event):
         company=[]
-        #event = self.get_companies(DRUG)
         event1 = json.loads(event)
         results = event1["results"]
         for comp in results:

@@ -3,7 +3,7 @@ import socketserver
 ##
 #WEB SERVER
 ###
-PORT = 8002
+PORT = 8000
 #Handler = http.server.SimpleHTTPRequestHandler
 Handler = web.testHTTPRequestHandler
 httpd = socketserver.TCPServer(("", PORT), Handler) #controlamos la petcion con el handler
