@@ -14,18 +14,22 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     LIMIT = '&limit=10'
     RECEIVE_LIMIT="?limit=10"
 
-    def get_events(self,item,query):
-        connection = http.client.HTTPSConnection(self.OPENFDA_API_URL)
-        if item or query =='':
-            connection.request("GET",self.OPENFDA_API_EVENT + self.RECEIVE_LIMIT)
-        else:
-            connection.request("GET",self.OPENFDA_API_EVENT+ query + item + self.LIMIT)
-        r1 = connection.getresponse()
-        data1 = r1.read() #te devuelve la informacion en bytes
-        data1 = data1.decode("utf8") #para pasar de bytes a string
-        event = data1
+    # GET, metodo GET
+    def do_GET(self): #en self controlamos la orden
+        self.do_head()
+        # Send message back to client
+        html = self.main_page()
+        # Write content as utf-8 data
+        self.send_ans(html)
+        return
 
-        return event
+    def do_head(self):
+        # Send response status code
+        self.send_response(200)#respuesta de que todo va bien, el self es el handler
+        # Send headers
+        self.send_header("Content-type","text/html") #va a devolver contenidos en http
+        self.end_headers()
+        return
 
     def main_page(self):
         html = '''
@@ -58,16 +62,38 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
         return html
 
-    def find_path(self):
-        return print(self.path)
+#-------------- get_events
 
-    def do_head(self):
-        # Send response status code
-        self.send_response(200)#respuesta de que todo va bien, el self es el handler
-        # Send headers
-        self.send_header("Content-type","text/html") #va a devolver contenidos en http
-        self.end_headers()
-        return
+    def get_events(self,item,query):
+        connection = http.client.HTTPSConnection(self.OPENFDA_API_URL)
+        if item or query =='':
+            connection.request("GET",self.OPENFDA_API_EVENT + self.RECEIVE_LIMIT)
+        else:
+            connection.request("GET",self.OPENFDA_API_EVENT+ query + item + self.LIMIT)
+        r1 = connection.getresponse()
+        data1 = r1.read() #te devuelve la informacion en bytes
+        data1 = data1.decode("utf8") #para pasar de bytes a string
+        event = data1
+
+        return event
+
+#----------parsing
+    def get_list(self,event):
+        drug=[]
+        event1 = json.loads(event)
+        results = event1["results"]
+        for i in results:
+            drug+= [i["patient"]["drug"][0]["medicinalproduct"]]
+        return drug
+
+    def get_companies_list(self,event):
+        company=[]
+        event1 = json.loads(event)
+        results = event1["results"]
+        for comp in results:
+            company += [comp["companynumb"]]
+
+        return company
 
 #----------------------send_ANS
 
@@ -101,36 +127,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
         return self.wfile.write(bytes(html, "utf8"))
 
-#-------------------
-
-    # GET, metodo GET
-    def do_GET(self): #en self controlamos la orden
-        self.do_head()
-        # Send message back to client
-        html = self.main_page()
-        # Write content as utf-8 data
-        self.send_ans(html)
-        return
-
-#----------parsing
-    def get_list(self,event):
-        drug=[]
-        event1 = json.loads(event)
-        results = event1["results"]
-        for i in results:
-            drug+= [i["patient"]["drug"][0]["medicinalproduct"]]
-        return drug
-
-    def get_companies_list(self,event):
-        company=[]
-        event1 = json.loads(event)
-        results = event1["results"]
-        for comp in results:
-            company += [comp["companynumb"]]
-
-        return company
-
-#---------------HTML
+#---------------feed_HTML
 
     def html_event(self,items_list):
         s=''
