@@ -39,22 +39,23 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             </head>
             <body>
             <h1>OPEN FDA client</>
-                <form method="get" action="receive">
+                <form method="get" action="listDrugs">
                     <input type="submit" value="listDrugs">
                     </input>
                 </form>
-                <form method="get" action="search">
+                <form method="get" action="searchDrug">
                     </input>
                     <input type="submit" value="Drug search LYRICA">
                     </input>
                     </form>
-                <form method="get" action="search">
+                <form method="get" action="listCompanies">
                     medicamento: <input type="text" name="Drug"></input>
-                    <input type="submit" value="Search companynumb"></input>
+                    <input type="submit" value="Search company numbers"></input>
                     </form>
-                <form method="get" action="search">
+                <form method="get" action="searchCompany">
+
                     companynumb: <input type="text" name="companynumb"></input>
-                    <input type="submit" value="Search medical product"></input>
+                    <input type="submit" value="Search medical products"></input>
                     </form>
             </body>
         </html>
@@ -100,23 +101,23 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     def send_ans(self,html):
         if self.path == '/':
             return self.wfile.write(bytes(html, "utf8"))
-        elif self.path=='/receive?':
+        elif self.path.startswith('/listDrugs'):
             event=self.get_events('','')
             list_drugs=self.get_list(event)
             html=self.html_event(list_drugs)
-        elif self.path == '/search?':
+        elif 'searchDrug' in self.path:
             drug = 'LYRICA'
             query = '?search=patient.drug.medicinalproduct:'
             event =self.get_events(drug,query)
             list_companies=self.get_companies_list(event)
             html= self.html_event(list_companies)
-        elif '/search?Drug' in self.path:
+        elif self.path.startswith('/listCompanies'):
             drug = self.path.split("=")[1]
             query = '?search=patient.drug.medicinalproduct:'
             event = self.get_events(drug,query)
             list_companies=self.get_companies_list(event)
             html=self.html_event(list_companies)
-        elif '/search?companynumb' in self.path:
+        elif 'searchCompany' in self.path:
             number = self.path.split("=")[1]
             query = '?search=companynumb:'
             event = self.get_events(number,query)
