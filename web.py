@@ -5,7 +5,7 @@ import http.client
 import json
 import socketserver
 
-'search=patient.drugs.medicinalproduct:"LYRICA"'+'&limit=10'
+#'search=patient.drugs.medicinalproduct:"LYRICA"'+'&limit=10'
 
 class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
@@ -43,19 +43,19 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                     <input type="submit" value="listDrugs">
                     </input>
                 </form>
-                <form method="get" action="searchDrug">
+                <form method="get" action="listCompanies">
                     </input>
-                    <input type="submit" value="Drug search LYRICA">
+                    <input type="submit" value="listCompanies LYRICA">
                     </input>
                     </form>
-                <form method="get" action="listCompanies">
-                    medicamento: <input type="text" name="Drug"></input>
-                    <input type="submit" value="Search company numbers"></input>
+                <form method="get" action="searchDrug">
+                    medicamento: <input type="text" name="drug"></input>
+                    <input type="submit" value="searchDrug"></input>
                     </form>
                 <form method="get" action="searchCompany">
 
-                    companynumb: <input type="text" name="companynumb"></input>
-                    <input type="submit" value="Search medical products"></input>
+                    companynumb: <input type="text" name="company"></input>
+                    <input type="submit" value="searchCompany"></input>
                     </form>
             </body>
         </html>
@@ -67,7 +67,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
     def get_events(self,item,query):
         connection = http.client.HTTPSConnection(self.OPENFDA_API_URL)
-        if item or query =='':
+        if item == query:
             connection.request("GET",self.OPENFDA_API_EVENT + self.RECEIVE_LIMIT)
         else:
             connection.request("GET",self.OPENFDA_API_EVENT+ query + item + self.LIMIT)
@@ -82,7 +82,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     def get_list(self,event):
         drug=[]
         event1 = json.loads(event)
-        results = event1["results"]
+        results = event1['results']
         for i in results:
             drug+= [i["patient"]["drug"][0]["medicinalproduct"]]
         return drug
@@ -90,7 +90,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     def get_companies_list(self,event):
         company=[]
         event1 = json.loads(event)
-        results = event1["results"]
+        results = event1['results']
         for comp in results:
             company += [comp["companynumb"]]
 
@@ -105,21 +105,21 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             event=self.get_events('','')
             list_drugs=self.get_list(event)
             html=self.html_event(list_drugs)
-        elif 'searchDrug' in self.path:
+        elif self.path.startswith('/listCompanies'):
             drug = 'LYRICA'
             query = '?search=patient.drug.medicinalproduct:'
             event =self.get_events(drug,query)
             list_companies=self.get_companies_list(event)
             html= self.html_event(list_companies)
-        elif self.path.startswith('/listCompanies'):
+        elif self.path.startswith('/searchDrug'):
             drug = self.path.split("=")[1]
             query = '?search=patient.drug.medicinalproduct:'
             event = self.get_events(drug,query)
             list_companies=self.get_companies_list(event)
             html=self.html_event(list_companies)
-        elif 'searchCompany' in self.path:
+        elif self.path.startswith('/searchCompany'):
             number = self.path.split("=")[1]
-            query = '?search=companynumb:'
+            query = "?search=companynumb:"
             event = self.get_events(number,query)
             list_numbers=self.get_list(event)
             html = self.html_event(list_numbers)
@@ -138,9 +138,9 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         <html>
             <head></head>
                 <body>
-                    <ul>
+                    <ol>
                         %s
-                    </ul>
+                    </ol>
                 </body>
         </html>''' %(s)
         return html
