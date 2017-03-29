@@ -11,8 +11,8 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
     OPENFDA_API_URL = "api.fda.gov"
     OPENFDA_API_EVENT = "/drug/event.json"
-    LIMIT = '&limit=10'
-    RECEIVE_LIMIT="?limit=10"
+    LIMIT = '&limit='
+    RECEIVE_LIMIT="?limit="
 
     # GET, metodo GET
     def do_GET(self): #en self controlamos la orden
@@ -40,23 +40,28 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             <body>
             <h1>OPEN FDA client</>
                 <form method="get" action="listDrugs">
-                    <input type="submit" value="listDrugs">
-                    </input>
+                    <input type="submit" value="listDrugs"></input>
+                    ---limit:<input type="text" name="limit"></input>
                 </form>
                 <form method="get" action="listCompanies">
-                    </input>
-                    <input type="submit" value="listCompanies LYRICA">
-                    </input>
+                    <input type="submit" value="listCompanies LYRICA"></input>
+                    ---limit:<input type="text" name="limit"></input>
+
                     </form>
                 <form method="get" action="searchDrug">
                     medicamento: <input type="text" name="drug"></input>
                     <input type="submit" value="searchDrug"></input>
                     </form>
                 <form method="get" action="searchCompany">
-
                     companynumb: <input type="text" name="company"></input>
                     <input type="submit" value="searchCompany"></input>
                     </form>
+
+                <form method="get" action="searchGender">
+                    <input type="submit" value="listGenders"></input>
+                    ---limit:<input type="text" name="limit"></input>
+                </form>
+
             </body>
         </html>
         '''
@@ -65,12 +70,12 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
 #-------------- get_events
 
-    def get_events(self,item,query):
+    def get_events(self,item,query,limit):
         connection = http.client.HTTPSConnection(self.OPENFDA_API_URL)
         if item == query:
-            connection.request("GET",self.OPENFDA_API_EVENT + self.RECEIVE_LIMIT)
+            connection.request("GET",self.OPENFDA_API_EVENT + self.RECEIVE_LIMIT+limit)
         else:
-            connection.request("GET",self.OPENFDA_API_EVENT+ query + item + self.LIMIT)
+            connection.request("GET",self.OPENFDA_API_EVENT+ query + item + self.LIMIT+limit)
         r1 = connection.getresponse()
         data1 = r1.read() #te devuelve la informacion en bytes
         data1 = data1.decode("utf8") #para pasar de bytes a string
@@ -80,21 +85,30 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
 #----------parsing
     def get_list(self,event):
-        drug=[]
+        drugs=[]
         event1 = json.loads(event)
         results = event1['results']
-        for i in results:
-            drug+= [i["patient"]["drug"][0]["medicinalproduct"]]
-        return drug
+        for drug in results:
+            drugs+= [drug["patient"]["drug"][0]["medicinalproduct"]]
+        return drugs
 
     def get_companies_list(self,event):
-        company=[]
+        companies=[]
         event1 = json.loads(event)
         results = event1['results']
-        for comp in results:
-            company += [comp["companynumb"]]
+        for company in results:
+            companies += [company["companynumb"]]
 
-        return company
+        return companies
+
+    def get_genders_list(self,event):
+        genders=[]
+        event1 = json.loads(event)
+        results = event1['results']
+        for gender in results:
+            genders += [gender["patient"]["patientsex"]]
+
+        return genders
 
 #----------------------send_ANS
 
@@ -102,27 +116,38 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         if self.path == '/':
             return self.wfile.write(bytes(html, "utf8"))
         elif self.path.startswith('/listDrugs'):
-            event=self.get_events('','')
+            limit = self.path.split("=")[1]
+            event=self.get_events('','',limit)
             list_drugs=self.get_list(event)
             html=self.html_event(list_drugs)
+
         elif self.path.startswith('/listCompanies'):
             drug = 'LYRICA'
             query = '?search=patient.drug.medicinalproduct:'
-            event =self.get_events(drug,query)
+            limit = self.path.split("=")[1]
+            event =self.get_events(drug,query,limit)
             list_companies=self.get_companies_list(event)
             html= self.html_event(list_companies)
+
         elif self.path.startswith('/searchDrug'):
             drug = self.path.split("=")[1]
             query = '?search=patient.drug.medicinalproduct:'
-            event = self.get_events(drug,query)
+            event = self.get_events(drug,query,'10')
             list_companies=self.get_companies_list(event)
             html=self.html_event(list_companies)
+
         elif self.path.startswith('/searchCompany'):
             number = self.path.split("=")[1]
             query = "?search=companynumb:"
-            event = self.get_events(number,query)
+            event = self.get_events(number,query,'10')
             list_numbers=self.get_list(event)
             html = self.html_event(list_numbers)
+
+        elif self.path.startswith('/searchGender'):
+            limit = self.path.split("=")[1]
+            event = self.get_events('','',limit)
+            list_genders = self.get_genders_list(event)
+            html = self.html_event(list_genders)
         else:
             return self.wfile.write(bytes('Nanay',"utf8"))
 
