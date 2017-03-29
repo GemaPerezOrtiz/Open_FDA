@@ -23,6 +23,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.send_ans(html)
         return
 
+
     def do_head(self):
         # Send response status code
         self.send_response(200)#respuesta de que todo va bien, el self es el handler
@@ -41,11 +42,11 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             <h1>OPEN FDA client</>
                 <form method="get" action="listDrugs">
                     <input type="submit" value="listDrugs"></input>
-                    ---limit:<input type="text" name="limit"></input>
+                    <h5>---limit:<input type="text" name="limit"></input></h5>
                 </form>
                 <form method="get" action="listCompanies">
                     <input type="submit" value="listCompanies LYRICA"></input>
-                    ---limit:<input type="text" name="limit"></input>
+                    <h5>---limit:<input type="text" name="limit"></input></h5>
 
                     </form>
                 <form method="get" action="searchDrug">
@@ -59,7 +60,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
                 <form method="get" action="searchGender">
                     <input type="submit" value="listGenders"></input>
-                    ---limit:<input type="text" name="limit"></input>
+                    <h5>---limit:<input type="text" name="limit"></input></h5>
                 </form>
 
             </body>
@@ -149,7 +150,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             list_genders = self.get_genders_list(event)
             html = self.html_event(list_genders)
         else:
-            return self.wfile.write(bytes('Nanay',"utf8"))
+            return self.wfile.write(bytes(self.html_not_found(),"utf8"))
 
         return self.wfile.write(bytes(html, "utf8"))
 
@@ -168,4 +169,13 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                     </ol>
                 </body>
         </html>''' %(s)
+        return html
+
+    def html_not_found(self):
+        html='''
+        <html>
+            <head>Error</head>
+                <title>Error 404: not found</title>
+            <body></body>
+        </html>'''
         return html
