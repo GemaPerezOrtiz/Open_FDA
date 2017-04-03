@@ -15,22 +15,24 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     RECEIVE_LIMIT="?limit="
 
     # GET, metodo GET
-    def do_GET(self): #en self controlamos la orden
-        self.do_head()
+    def do_GET(self):
+
+        #self.send_response(200)#respuesta de que todo va bien, el self es el handler
         # Send message back to client
-        html = self.main_page()
+        html=self.send_ans()
         # Write content as utf-8 data
-        self.send_ans(html)
-        return
+        if  html !='':
+            self.send_response(200)
+        else:
+            self.send_response(404)
+            html=self.html_not_found()
 
-
-    def do_head(self):
-        # Send response status code
-        self.send_response(200)#respuesta de que todo va bien, el self es el handler
-        # Send headers
-        self.send_header("Content-type","text/html") #va a devolver contenidos en http
+        self.send_header("Content-type","text/html")
         self.end_headers()
+        self.wfile.write(bytes(html,"utf8"))
+        #self.end_headers()
         return
+
 
     def main_page(self):
         html = '''
@@ -41,12 +43,10 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             <body>
             <h1>OPEN FDA client</>
                 <form method="get" action="listDrugs">
-                    <input type="submit" value="listDrugs"></input>
-                    <h5>---limit:<input type="text" name="limit"></input></h5>
+                    <input type="submit" value="listDrugs"></input>-----limit:<input type="text" name="limit"></input>
                 </form>
                 <form method="get" action="listCompanies">
-                    <input type="submit" value="listCompanies LYRICA"></input>
-                    <h5>---limit:<input type="text" name="limit"></input></h5>
+                    <input type="submit" value="listCompanies LYRICA"></input>-----limit:<input type="text" name="limit"></input>
 
                     </form>
                 <form method="get" action="searchDrug">
@@ -54,15 +54,13 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
                     <input type="submit" value="searchDrug"></input>
                     </form>
                 <form method="get" action="searchCompany">
-                    companynumb: <input type="text" name="company"></input>
+                    company number: <input type="text" name="company"></input>
                     <input type="submit" value="searchCompany"></input>
                     </form>
 
                 <form method="get" action="searchGender">
-                    <input type="submit" value="listGenders"></input>
-                    <h5>---limit:<input type="text" name="limit"></input></h5>
+                    <input type="submit" value="listGenders"></input>-----limit:<input type="text" name="limit"></input>
                 </form>
-
             </body>
         </html>
         '''
@@ -113,9 +111,10 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
 #----------------------send_ANS
 
-    def send_ans(self,html):
+    def send_ans(self):
+        html=''
         if self.path == '/':
-            return self.wfile.write(bytes(html, "utf8"))
+            html=self.main_page()
         elif self.path.startswith('/listDrugs'):
             limit = self.path.split("=")[1]
             event=self.get_events('','',limit)
@@ -133,26 +132,33 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         elif self.path.startswith('/searchDrug'):
             drug = self.path.split("=")[1]
             query = '?search=patient.drug.medicinalproduct:'
-            event = self.get_events(drug,query,'10')
-            list_companies=self.get_companies_list(event)
-            html=self.html_event(list_companies)
+            event = self.get_events(drug,query,'35')
+            if drug in event:
+                list_companies=self.get_companies_list(event)
+                html=self.html_event(list_companies)
+            else:
+                html=''
 
         elif self.path.startswith('/searchCompany'):
             number = self.path.split("=")[1]
+            print(number)
             query = "?search=companynumb:"
-            event = self.get_events(number,query,'10')
-            list_numbers=self.get_list(event)
-            html = self.html_event(list_numbers)
+            event = self.get_events(number,query,'35')
+            if number in event:
+                list_numbers=self.get_list(event)
+                html = self.html_event(list_numbers)
+            else:
+                html=''
 
         elif self.path.startswith('/searchGender'):
             limit = self.path.split("=")[1]
             event = self.get_events('','',limit)
             list_genders = self.get_genders_list(event)
             html = self.html_event(list_genders)
-        else:
-            return self.wfile.write(bytes(self.html_not_found(),"utf8"))
+        #else:
+            #html=''
 
-        return self.wfile.write(bytes(html, "utf8"))
+        return html
 
 #---------------feed_HTML
 
