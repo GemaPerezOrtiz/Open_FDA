@@ -85,18 +85,25 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 #----------parsing
     def get_list(self,event):
         drugs=[]
-        event1 = json.loads(event)
-        results = event1['results']
-        for drug in results:
-            drugs+= [drug["patient"]["drug"][0]["medicinalproduct"]]
+        try:
+            event1 = json.loads(event)
+            results = event1['results']
+            for drug in results:
+                drugs+= [drug["patient"]["drug"][0]["medicinalproduct"]]
+        except KeyError:
+            drugs = 0
+
         return drugs
 
     def get_companies_list(self,event):
         companies=[]
-        event1 = json.loads(event)
-        results = event1['results']
-        for company in results:
-            companies += [company["companynumb"]]
+        try:
+            event1 = json.loads(event)
+            results = event1['results']
+            for company in results:
+                companies += [company["companynumb"]]
+        except KeyError:
+            companies = 0
 
         return companies
 
@@ -132,23 +139,23 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         elif self.path.startswith('/searchDrug'):
             drug = self.path.split("=")[1]
             query = '?search=patient.drug.medicinalproduct:'
-            event = self.get_events(drug,query,'35')
-            if drug in event:
-                list_companies=self.get_companies_list(event)
-                html=self.html_event(list_companies)
-            else:
+            event = self.get_events(drug,query,'10')
+            list_companies=self.get_companies_list(event)
+            if list_companies == 0:
                 html=''
+            else:
+                html=self.html_event(list_companies)
 
         elif self.path.startswith('/searchCompany'):
             number = self.path.split("=")[1]
             print(number)
             query = "?search=companynumb:"
-            event = self.get_events(number,query,'35')
-            if number in event:
-                list_numbers=self.get_list(event)
-                html = self.html_event(list_numbers)
+            event = self.get_events(number,query,'10')
+            list_numbers=self.get_list(event)
+            if list_numbers == 0:
+                html = ''
             else:
-                html=''
+                html=self.html_event(list_numbers)
 
         elif self.path.startswith('/searchGender'):
             limit = self.path.split("=")[1]
