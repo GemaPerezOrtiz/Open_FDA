@@ -5,8 +5,6 @@ import http.client
 import json
 import socketserver
 
-#'search=patient.drugs.medicinalproduct:"LYRICA"'+'&limit=10'
-
 class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
     OPENFDA_API_URL = "api.fda.gov"
@@ -14,60 +12,72 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     LIMIT = '&limit='
     RECEIVE_LIMIT="?limit="
 
-    # GET, metodo GET
     def do_GET(self):
 
-        #self.send_response(200)#respuesta de que todo va bien, el self es el handler
         # Send message back to client
         html=self.send_ans()
-        # Write content as utf-8 data
+
         if  html !='':
             self.send_response(200)
         else:
             self.send_response(404)
-            html=self.html_not_found()
+            html=OpenFDAHTML.html_not_found(self)
 
         self.send_header("Content-type","text/html")
         self.end_headers()
         self.wfile.write(bytes(html,"utf8"))
-        #self.end_headers()
         return
 
+    def send_ans(self):
+        html=''
+        if self.path == '/':
+            html=OpenFDAHTML.main_page(self)
+        elif self.path.startswith('/listDrugs'):
+            limit = self.path.split("=")[1]
+            event=OpenFDAClient.get_events(self,'','',limit)
+            list_drugs=OpenFDAParser.get_list(self,event)
+            html=OpenFDAHTML.html_event(self,list_drugs)
 
-    def main_page(self):
-        html = '''
-        <html>
-            <head>
-                <title>OpenFDA ingenieros chulos</title>
-            </head>
-            <body>
-            <h1>OPEN FDA client</>
-                <form method="get" action="listDrugs">
-                    <input type="submit" value="listDrugs"></input>-----limit:<input type="text" name="limit"></input>
-                </form>
-                <form method="get" action="listCompanies">
-                    <input type="submit" value="listCompanies LYRICA"></input>-----limit:<input type="text" name="limit"></input>
+        elif self.path.startswith('/listCompanies'):
+            drug = 'LYRICA'
+            query = '?search=patient.drug.medicinalproduct:'
+            limit = self.path.split("=")[1]
+            event =OpenFDAClient.get_events(self,drug,query,limit)
+            list_companies=OpenFDAParser.get_companies_list(self,event)
+            html= OpenFDAHTML.html_event(self,list_companies)
 
-                    </form>
-                <form method="get" action="searchDrug">
-                    medicamento: <input type="text" name="drug"></input>
-                    <input type="submit" value="searchDrug"></input>
-                    </form>
-                <form method="get" action="searchCompany">
-                    company number: <input type="text" name="company"></input>
-                    <input type="submit" value="searchCompany"></input>
-                    </form>
+        elif self.path.startswith('/searchDrug'):
+            drug = self.path.split("=")[1]
+            query = '?search=patient.drug.medicinalproduct:'
+            event = OpenFDAClient.get_events(self,drug,query,'10')
+            list_companies=OpenFDAParser.get_companies_list(self,event)
+            if list_companies == 0:
+                html=''
+            else:
+                html=OpenFDAHTML.html_event(self,list_companies)
 
-                <form method="get" action="searchGender">
-                    <input type="submit" value="listGenders"></input>-----limit:<input type="text" name="limit"></input>
-                </form>
-            </body>
-        </html>
-        '''
+        elif self.path.startswith('/searchCompany'):
+            number = self.path.split("=")[1]
+            print(number)
+            query = "?search=companynumb:"
+            event = OpenFDAClient.get_events(self,number,query,'10')
+            list_numbers=OpenFDAParser.get_list(self,event)
+            if list_numbers == 0:
+                html = ''
+            else:
+                html=OpenFDAHTML.html_event(self,list_numbers)
+
+        elif self.path.startswith('/searchGender'):
+            limit = self.path.split("=")[1]
+            event = OpenFDAClient.get_events(self,'','',limit)
+            list_genders = OpenFDAParser.get_genders_list(self,event)
+            html = OpenFDAHTML.html_event(self,list_genders)
 
         return html
 
 #-------------- get_events
+
+class OpenFDAClient():
 
     def get_events(self,item,query,limit):
         connection = http.client.HTTPSConnection(self.OPENFDA_API_URL)
@@ -81,8 +91,10 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         event = data1
 
         return event
+#-------------------------
 
-#----------parsing
+class OpenFDAParser ():
+
     def get_list(self,event):
         drugs=[]
         try:
@@ -116,58 +128,39 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
         return genders
 
-#----------------------send_ANS
+class OpenFDAHTML ():
 
-    def send_ans(self):
-        html=''
-        if self.path == '/':
-            html=self.main_page()
-        elif self.path.startswith('/listDrugs'):
-            limit = self.path.split("=")[1]
-            event=self.get_events('','',limit)
-            list_drugs=self.get_list(event)
-            html=self.html_event(list_drugs)
+    def main_page(self):
+        html = '''
+        <html>
+            <head>
+                <title>OpenFDA ingenieros chulos</title>
+            </head>
+            <body>
+            <h1>OPEN FDA client</>
+                <form method="get" action="listDrugs">
+                    <input type="submit" value="listDrugs"></input>-----limit:<input type="text" name="limit"></input>
+                </form>
+                <form method="get" action="listCompanies">
+                    <input type="submit" value="listCompanies LYRICA"></input>-----limit:<input type="text" name="limit"></input>
 
-        elif self.path.startswith('/listCompanies'):
-            drug = 'LYRICA'
-            query = '?search=patient.drug.medicinalproduct:'
-            limit = self.path.split("=")[1]
-            event =self.get_events(drug,query,limit)
-            list_companies=self.get_companies_list(event)
-            html= self.html_event(list_companies)
+                    </form>
+                <form method="get" action="searchDrug">
+                    medicamento: <input type="text" name="drug"></input>
+                    <input type="submit" value="searchDrug"></input>
+                    </form>
+                <form method="get" action="searchCompany">
+                    company number: <input type="text" name="company"></input>
+                    <input type="submit" value="searchCompany"></input>
+                    </form>
 
-        elif self.path.startswith('/searchDrug'):
-            drug = self.path.split("=")[1]
-            query = '?search=patient.drug.medicinalproduct:'
-            event = self.get_events(drug,query,'10')
-            list_companies=self.get_companies_list(event)
-            if list_companies == 0:
-                html=''
-            else:
-                html=self.html_event(list_companies)
-
-        elif self.path.startswith('/searchCompany'):
-            number = self.path.split("=")[1]
-            print(number)
-            query = "?search=companynumb:"
-            event = self.get_events(number,query,'10')
-            list_numbers=self.get_list(event)
-            if list_numbers == 0:
-                html = ''
-            else:
-                html=self.html_event(list_numbers)
-
-        elif self.path.startswith('/searchGender'):
-            limit = self.path.split("=")[1]
-            event = self.get_events('','',limit)
-            list_genders = self.get_genders_list(event)
-            html = self.html_event(list_genders)
-        #else:
-            #html=''
-
+                <form method="get" action="searchGender">
+                    <input type="submit" value="listGenders"></input>-----limit:<input type="text" name="limit"></input>
+                </form>
+            </body>
+        </html>
+        '''
         return html
-
-#---------------feed_HTML
 
     def html_event(self,items_list):
         s=''
