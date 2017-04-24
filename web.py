@@ -11,7 +11,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
 
         # Send message back to client
-        html=self.send_ans()
+        html=self.send_answer()
 
         if  html !='':
             self.send_response(200)
@@ -31,7 +31,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         self.wfile.write(bytes(html,"utf8"))
         return
 
-    def send_ans(self):
+    def send_answer(self):
         html=''
         if self.path == '/':
             html=OpenFDAHTML.main_page(self)
