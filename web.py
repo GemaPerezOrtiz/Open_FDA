@@ -7,10 +7,6 @@ import socketserver
 
 class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
-    OPENFDA_API_URL = "api.fda.gov"
-    OPENFDA_API_EVENT = "/drug/event.json"
-    LIMIT = '&limit='
-    RECEIVE_LIMIT="?limit="
 
     def do_GET(self):
 
@@ -19,11 +15,18 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
 
         if  html !='':
             self.send_response(200)
+            self.send_header("Content-type","text/html")
+        elif self.path.startswith('/secret'):
+            self.send_response(401)
+            self.send_header('WWW-Authenticate', 'Basic realm=\"Test\"')
+        elif self.path.startswith('/redirect'):
+            self.send_response(302)
+            self.send_header('Location','http://localhost:8000/')
         else:
             self.send_response(404)
-            html=OpenFDAHTML.html_not_found(self)
+            html=OpenFDAHTML().html_not_found()
+            self.send_header("Content-type","text/html")
 
-        self.send_header("Content-type","text/html")
         self.end_headers()
         self.wfile.write(bytes(html,"utf8"))
         return
@@ -34,50 +37,55 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             html=OpenFDAHTML.main_page(self)
         elif self.path.startswith('/listDrugs'):
             limit = self.path.split("=")[1]
-            event=OpenFDAClient.get_events(self,'','',limit)
-            list_drugs=OpenFDAParser.get_list(self,event)
-            html=OpenFDAHTML.html_event(self,list_drugs)
+            event=OpenFDAClient().get_events('','',limit)
+            list_drugs=OpenFDAParser().get_list(event)
+            html=OpenFDAHTML().html_event(list_drugs)
 
         elif self.path.startswith('/listCompanies'):
             drug = 'LYRICA'
             query = '?search=patient.drug.medicinalproduct:'
             limit = self.path.split("=")[1]
-            event =OpenFDAClient.get_events(self,drug,query,limit)
-            list_companies=OpenFDAParser.get_companies_list(self,event)
-            html= OpenFDAHTML.html_event(self,list_companies)
+            event =OpenFDAClient().get_events(drug,query,limit)
+            list_companies=OpenFDAParser().get_companies_list(event)
+            html= OpenFDAHTML().html_event(list_companies)
 
         elif self.path.startswith('/searchDrug'):
             drug = self.path.split("=")[1]
             query = '?search=patient.drug.medicinalproduct:'
-            event = OpenFDAClient.get_events(self,drug,query,'10')
-            list_companies=OpenFDAParser.get_companies_list(self,event)
+            event = OpenFDAClient().get_events(drug,query,'10')
+            list_companies=OpenFDAParser().get_companies_list(event)
             if list_companies == 0:
                 html=''
             else:
-                html=OpenFDAHTML.html_event(self,list_companies)
+                html=OpenFDAHTML().html_event(list_companies)
 
         elif self.path.startswith('/searchCompany'):
             number = self.path.split("=")[1]
             print(number)
             query = "?search=companynumb:"
-            event = OpenFDAClient.get_events(self,number,query,'10')
-            list_numbers=OpenFDAParser.get_list(self,event)
+            event = OpenFDAClient().get_events(number,query,'10')
+            list_numbers=OpenFDAParser().get_list(event)
             if list_numbers == 0:
                 html = ''
             else:
-                html=OpenFDAHTML.html_event(self,list_numbers)
+                html=OpenFDAHTML().html_event(list_numbers)
 
         elif self.path.startswith('/searchGender'):
             limit = self.path.split("=")[1]
-            event = OpenFDAClient.get_events(self,'','',limit)
-            list_genders = OpenFDAParser.get_genders_list(self,event)
-            html = OpenFDAHTML.html_event(self,list_genders)
+            event = OpenFDAClient().get_events('','',limit)
+            list_genders = OpenFDAParser().get_genders_list(event)
+            html = OpenFDAHTML().html_event(list_genders)
 
         return html
 
 #-------------- get_events
 
 class OpenFDAClient():
+
+    OPENFDA_API_URL = "api.fda.gov"
+    OPENFDA_API_EVENT = "/drug/event.json"
+    LIMIT = '&limit='
+    RECEIVE_LIMIT="?limit="
 
     def get_events(self,item,query,limit):
         connection = http.client.HTTPSConnection(self.OPENFDA_API_URL)
@@ -93,7 +101,7 @@ class OpenFDAClient():
         return event
 #-------------------------
 
-class OpenFDAParser ():
+class OpenFDAParser():
 
     def get_list(self,event):
         drugs=[]
@@ -156,7 +164,8 @@ class OpenFDAHTML ():
 
                 <form method="get" action="searchGender">
                     <input type="submit" value="listGenders"></input>-----limit:<input type="text" name="limit"></input>
-                </form>
+                    </form>
+                    </html>
             </body>
         </html>
         '''
