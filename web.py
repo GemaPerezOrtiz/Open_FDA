@@ -70,7 +70,7 @@ class testHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
             else:
                 html=OpenFDAHTML().html_event(list_numbers)
 
-        elif self.path.startswith('/searchGender'):
+        elif self.path.startswith('/listGender'):
             limit = self.path.split("=")[1]
             event = OpenFDAClient().get_events('','',limit)
             list_genders = OpenFDAParser().get_genders_list(event)
@@ -162,7 +162,7 @@ class OpenFDAHTML ():
                     <input type="submit" value="searchCompany"></input>
                     </form>
 
-                <form method="get" action="searchGender">
+                <form method="get" action="listGender">
                     <input type="submit" value="listGenders"></input>-----limit:<input type="text" name="limit"></input>
                     </form>
                     </html>
